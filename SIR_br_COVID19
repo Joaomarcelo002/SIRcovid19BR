@@ -1,0 +1,94 @@
+#pacotes necessário para realizar o algoritmo
+from scipy.integrate import odeint #responsável por encontrar a solução numérica do nosso problema
+import numpy as np
+import plotly.graph_objects as go
+
+
+
+
+#Definimos como o nosso algoritmo se comportará
+def SIR(t,beta,gama,N, i0,r0): 
+    def dotSIR(y,t,beta,gama,N): # função que define o sistema de EDOs
+      S,I,R = y # # y é o vetor com as 3 equações S,I,R
+      dydt = [-beta*S*I/N,beta*S*I/N - gama*I, gama*I ] #vetor em que cada elemento é uma das equações
+      return dydt
+    #S = Pessoas que suscetíveis, ou seja, que podem ser infectadas.
+    #I = Pessoas que foram infectadas.
+    #R = Pessoas que se recuperaram.
+    #beta = Taxa de transmissão da doença.
+    #gama = Taxa de recuperação.
+    #N = População total.
+
+
+    # Como se trata de um sistema de EDOs precisamos das condições iniciais para resolvê-lo.
+    #Como esse modelo considera a populção constante vamos considerar s0 = N - i0 - r0
+    # N = população total.
+    #s0 = número inicial de pessoas Suscetíveis.
+    #i0 = número inicial de pessoas Infectadas.
+    #r0 = número inicial de pessoas Recuperadas.
+    s0 = N - i0 - r0
+    y0 = [s0,i0,r0] #vetor que armazena as condições iniciais do sistema
+
+    sol = odeint(dotSIR, y0,t, args=(beta,gama,N)) 
+    # O comando retorna uma matriz com as colunas determinadas pelo número de equações, nesse caso 3 
+    # e com o número de linhas referentes ao intervalo de tempo considerado.
+    
+    S = sol[:,0] 
+    # a primeira coluna da matriz sol é referente aos Suscetíves, que é a primeira equação do sistema.
+    I = sol[:,1] 
+    # a segunda coluna da matriz é referente aos Infectados, que é a segunda equação do sistema.
+    R = sol[:,2] 
+    # a terceira coluna da matriz é referente aos Recuperados, que é a terceira equação do sistema.
+    C = sol[:, 1] + sol[:,2] 
+    #variável que armazena a soma dos Infectados + Recuperados com o tempo para podermos analisar o
+    #valor acumulado de pessoas infectadas no decorrer da epidemia
+
+    return S,I,R,C
+    
+    
+    
+    #Parâmetros para gerar a solução:
+beta = 0.17789    #taxa de contágio
+gama = 0.1   # taxa de recuperação
+N = 210000000      # população total
+i0 = 1         # número inicial de infectados
+r0 = 0         # número inicial de recuperados
+t = np.arange(700) 
+#gera um vetor (0,1,2,3..,700) que representa o valores de t usados para gerar a solução.
+
+solucao = SIR(t,beta,gama,N, i0,r0) 
+#variável que armazenará S,I,R,C que são os valores retornados pela função SIR,
+#como a função retorna um array com cada elemento sendo S,I,R,C para analisar cada solução separadamente  
+#vamos definir as seguintes variáveis
+S = solucao[0]  #Suscetíves
+I = solucao[1]  #Infectados
+R = solucao[2]  #Recuperados
+C = solucao[3]  #Casos Acumulados
+
+#cada uma das variáveis trace abaixo armazena o conjunto de pontos gerada pela função SIR que queremos plotar. 
+#Veja que como queremos plotar 4 conjuntos de dados diferentes S,I,R,C armazenamos cada um deles em uma varíavel.
+trace1 = go.Scatter(x=t, y=S,mode='lines',name='Suscetíveis',) 
+
+trace2 = go.Scatter(x=t, y=I, mode='lines',name='Infectados',)
+
+trace3 = go.Scatter(x=t, y=R, mode='lines', name='Recuperados',)
+
+trace4 = go.Scatter(x=t, y=C,mode='lines',name='Casos acumulados',)
+
+layout = go.Layout( title = 'Modelo SIR', #define o título do gráfico 
+                  titlefont = {'family': 'Arial', 'size': 22,'color': '#7f7f7f'}, #define a fonte e cor e fonte do título
+                  xaxis = {'title': 'Dias'}, #título do eixo x
+                  yaxis = {'title': 'População'},  #título do eixo y
+                       )
+
+data=[trace1,trace2,trace3,trace4] #vetor que armazena os pontos que queremos plotar
+
+fig = go.Figure(data, layout = layout) #função que gera a figura
+       
+fig.update_layout(
+legend_orientation="h", #define a localização da legenda
+legend=dict(
+         y=-0.15,       #coloca um recuo na legenda para que ela fique mais longe do título do eixo x.
+        ))
+
+fig.show() #mostra a figura
